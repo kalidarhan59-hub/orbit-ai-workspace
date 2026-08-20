@@ -1,0 +1,24 @@
+# Project TODO
+
+- [x] Review the supplied product prompt and research archives for reusable, license-safe architecture patterns.
+- [x] Define original ORBIT domain models for agents, conversations, messages, memory notes, attachments, settings, and generated media.
+- [x] Create persistent database schema and protected tRPC procedures scoped to the authenticated user.
+- [x] Implement Manus OAuth-aware protected workspace routing and a dashboard shell.
+- [x] Register protected workspace routes and verify the OAuth login gate for unauthenticated visitors.
+- [x] Create the sidebar with exactly these sections, in order: Chat, Agents, History, Files, Settings.
+- [x] Implement a polished responsive Chat workspace with progressive markdown message rendering.
+- [x] Add model selection, default-model preferences, custom assistant behavior, and a default system prompt.
+- [x] Implement creation, editing, naming, and management of agents with custom system prompts and persistent agent memory.
+- [x] Persist conversation threads and messages per user; support browsing history and resuming a thread.
+- [x] Add secure file upload and attachments for documents and images in conversations.
+- [x] Add microphone capture, transcription, automatic message submission, and visible transcription states.
+- [x] Add image generation from text and show generated images inline in chat messages.
+- [x] Build Files, Agents, History, and Settings pages with loading, empty, error, and success states.
+- [x] Add and verify persistent query-error views on Files, Agents, History, and Settings rather than relying only on mutation notifications.
+- [x] Re-run TypeScript and test validation after the management-page error states are confirmed.
+- [x] Add Vitest coverage for core data transformations.
+- [x] Add Vitest coverage for anonymous denial on protected assistant, history, file, memory, and settings routes.
+- [ ] Add integration coverage for authenticated assistant sends and cross-user resource isolation before enabling multi-user collaboration.
+- [x] Verify TypeScript, tests, desktop and mobile rendering.
+- [ ] Manually verify core browser flows: agent creation, chat, attachments, voice auto-send, inline image generation, and history resume.
+- [ ] Create a final checkpoint and deliver the implementation summary.

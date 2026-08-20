@@ -5,12 +5,24 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Landing from "./pages/Landing";
+import Agents from "./pages/Agents";
+import History from "./pages/History";
+import Files from "./pages/Files";
+import Settings from "./pages/Settings";
+import Chat from "./pages/Chat";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Landing} />
+      <Route path={"/app"} component={Chat} />
+      <Route path={"/app/chat/:threadId"} component={Chat} />
+      <Route path={"/app/agents"} component={Agents} />
+      <Route path={"/app/history"} component={History} />
+      <Route path={"/app/files"} component={Files} />
+      <Route path={"/app/settings"} component={Settings} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

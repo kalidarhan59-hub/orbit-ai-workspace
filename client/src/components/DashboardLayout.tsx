@@ -19,7 +19,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { Bot, FileText, History, LogOut, MessageSquareText, Orbit, PanelLeft, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -50,10 +49,15 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (!loading && !user) setLocation("/");
+  }, [loading, setLocation, user]);
 
   if (loading) {
     return <DashboardLayoutSkeleton />
@@ -61,25 +65,7 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Войдите, чтобы продолжить
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Рабочее пространство ORBIT защищено. Продолжите через безопасный вход.
-            </p>
-          </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Войти через Manus
-          </Button>
-        </div>
-      </div>
+      <div className="grid min-h-screen place-items-center bg-[#070b16] text-sm text-slate-400">Перенаправляем к входу…</div>
     );
   }
 
@@ -215,9 +201,7 @@ function DashboardLayoutContent({
                     <p className="text-sm font-medium truncate leading-none">
                       {user?.name || "-"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-1.5">Личный аккаунт</p>
                   </div>
                 </button>
               </DropdownMenuTrigger>

@@ -28,6 +28,12 @@ import {
 } from "./db";
 import { buildAssistantInstructions, formatAttachmentContext, isImageRequest, safeFileName, titleFromMessage } from "./orbit";
 import { storageGetSignedUrl, storagePut } from "./storage";
+import { createLocalAccount, getLocalAccountUser } from "./db";
+import { hashPassword, localOpenId, normalizeUsername, verifyPassword } from "./localAuth";
+import { sdk } from "./_core/sdk";
+
+const usernameSchema = z.string().trim().min(3, "Логин должен содержать не менее 3 символов.").max(48).regex(/^[a-zA-Z0-9._-]+$/, "Используйте латинские буквы, цифры, точку, дефис или подчёркивание.");
+const passwordSchema = z.string().min(8, "Пароль должен содержать не менее 8 символов.").max(128);
 
 const attachmentSchema = z.object({
   id: z.string().optional(),
@@ -71,6 +77,21 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+    register: publicProcedure.input(z.object({ username: usernameSchema, password: passwordSchema, confirmPassword: z.string() }).refine((value) => value.password === value.confirmPassword, { path: ["confirmPassword"], message: "Пароли не совпадают." })).mutation(async ({ ctx, input }) => {
+      const username = normalizeUsername(input.username);
+      const user = await createLocalAccount({ username, passwordHash: await hashPassword(input.password), openId: localOpenId(username) });
+      if (!user) throw new TRPCError({ code: "CONFLICT", message: "Этот логин уже занят." });
+      const token = await sdk.createSessionToken(user.openId, { name: user.name || username });
+      ctx.res.cookie(COOKIE_NAME, token, getSessionCookieOptions(ctx.req));
+      return { id: user.id, name: user.name, loginMethod: "local" as const };
+    }),
+    login: publicProcedure.input(z.object({ username: usernameSchema, password: passwordSchema })).mutation(async ({ ctx, input }) => {
+      const account = await getLocalAccountUser(normalizeUsername(input.username));
+      if (!account || !(await verifyPassword(input.password, account.account.passwordHash))) throw new TRPCError({ code: "UNAUTHORIZED", message: "Неверный логин или пароль." });
+      const token = await sdk.createSessionToken(account.user.openId, { name: account.user.name || account.account.username });
+      ctx.res.cookie(COOKIE_NAME, token, getSessionCookieOptions(ctx.req));
+      return { id: account.user.id, name: account.user.name, loginMethod: "local" as const };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       ctx.res.clearCookie(COOKIE_NAME, { ...getSessionCookieOptions(ctx.req), maxAge: -1 });
       return { success: true } as const;

@@ -18,7 +18,14 @@
 - [x] Re-run TypeScript and test validation after the management-page error states are confirmed.
 - [x] Add Vitest coverage for core data transformations.
 - [x] Add Vitest coverage for anonymous denial on protected assistant, history, file, memory, and settings routes.
-- [ ] Add integration coverage for authenticated assistant sends and cross-user resource isolation before enabling multi-user collaboration.
+- [x] Add integration coverage for authenticated assistant sends and cross-user resource isolation before enabling multi-user collaboration.
 - [x] Verify TypeScript, tests, desktop and mobile rendering.
 - [ ] Manually verify core browser flows: agent creation, chat, attachments, voice auto-send, inline image generation, and history resume.
 - [ ] Create a final checkpoint and deliver the implementation summary.
+- [x] Investigate and eliminate the landing-page-to-login loop reported when opening the workspace.
+- [x] Remove the public marketing landing page and make the auth screen the root entry route.
+- [x] Implement local login and registration with username, password, password confirmation, hashed credentials, and protected application sessions.
+- [x] Remove personal e-mail and platform-brand wording from all ORBIT-controlled login and dashboard UI.
+- [ ] Confirm the platform-owned development-preview badge is absent or acceptable in the published runtime; it is outside ORBIT source control.
+- [x] Remove the Google sign-in control and all deferred Google OAuth references from the authentication experience.
+- [ ] Test registration, local login, logout, and protected route behavior.

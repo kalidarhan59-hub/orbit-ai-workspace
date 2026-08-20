@@ -5,7 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 import Agents from "./pages/Agents";
 import History from "./pages/History";
 import Files from "./pages/Files";
@@ -16,7 +16,7 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Landing} />
+      <Route path={"/"} component={Auth} />
       <Route path={"/app"} component={Chat} />
       <Route path={"/app/chat/:threadId"} component={Chat} />
       <Route path={"/app/agents"} component={Agents} />

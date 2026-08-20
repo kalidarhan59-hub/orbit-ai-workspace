@@ -15,6 +15,7 @@ describe("protected ORBIT procedures", () => {
     const caller = appRouter.createCaller(createAnonymousContext());
 
     await expect(caller.assistant.models()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller.assistant.send({ content: "Проверка", attachments: [], mode: "chat" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.history.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.files.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.memory.list({})).rejects.toMatchObject({ code: "UNAUTHORIZED" });

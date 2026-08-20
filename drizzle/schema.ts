@@ -13,6 +13,14 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const localAccounts = mysqlTable("orbit_local_accounts", {
+  userId: int("userId").primaryKey(),
+  username: varchar("username", { length: 48 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const agents = mysqlTable("orbit_agents", {
   id: varchar("id", { length: 32 }).primaryKey(),
   userId: int("userId").notNull(),

@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import {
   agents,
   files,
+  localAccounts,
   memoryNotes,
   messages,
   threads,
@@ -53,6 +54,34 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function getLocalAccount(username: string) {
+  const db = await requireDb();
+  const result = await db.select().from(localAccounts).where(eq(localAccounts.username, username)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function getLocalAccountUser(username: string) {
+  const db = await requireDb();
+  const result = await db
+    .select({ account: localAccounts, user: users })
+    .from(localAccounts)
+    .innerJoin(users, eq(localAccounts.userId, users.id))
+    .where(eq(localAccounts.username, username))
+    .limit(1);
+  return result[0] ?? null;
+}
+
+export async function createLocalAccount(input: { username: string; passwordHash: string; openId: string }) {
+  const db = await requireDb();
+  const existing = await getLocalAccount(input.username);
+  if (existing) return null;
+  await db.insert(users).values({ openId: input.openId, name: input.username, email: null, loginMethod: "local", lastSignedIn: new Date() });
+  const user = await getUserByOpenId(input.openId);
+  if (!user) throw new Error("Не удалось создать учётную запись.");
+  await db.insert(localAccounts).values({ userId: user.id, username: input.username, passwordHash: input.passwordHash });
+  return user;
 }
 
 export async function listAgents(userId: number) {

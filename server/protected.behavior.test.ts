@@ -26,8 +26,23 @@ const llm = vi.hoisted(() => ({
   listLLMModels: vi.fn(),
 }));
 
+const storage = vi.hoisted(() => ({
+  storageGetSignedUrl: vi.fn(),
+  storagePut: vi.fn(),
+}));
+
+const imageService = vi.hoisted(() => ({
+  generateImage: vi.fn(),
+  listImageModels: vi.fn(),
+}));
+
+const voiceService = vi.hoisted(() => ({ transcribeAudio: vi.fn() }));
+
 vi.mock("./db", () => db);
 vi.mock("./_core/llm", () => llm);
+vi.mock("./storage", () => storage);
+vi.mock("./_core/imageGeneration", () => imageService);
+vi.mock("./_core/voiceTranscription", () => voiceService);
 
 import { appRouter } from "./routers";
 
@@ -98,5 +113,75 @@ describe("ORBIT protected procedure behavior", () => {
 
     await expect(appRouter.createCaller(userContext(2)).history.get({ threadId: "thread-1" })).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(db.getThread).toHaveBeenCalledWith(2, "thread-1");
+  });
+
+  it("offers ORBIT Intelligence as a truthful auto-routing mode alongside available models", async () => {
+    llm.listLLMModels.mockResolvedValue({ data: [{ id: "integrated-model" }] });
+
+    const models = await appRouter.createCaller(userContext(1)).assistant.models();
+
+    expect(models[0]).toMatchObject({ id: "orbit-intelligence", label: "ORBIT Intelligence", provider: "ORBIT" });
+    expect(models).toContainEqual(expect.objectContaining({ id: "integrated-model" }));
+  });
+
+  it("creates a downloadable HTML artifact in website mode", async () => {
+    const thread = { id: "thread-site", userId: 1, agentId: null, title: "Сайт", modelId: null, createdAt: new Date(), updatedAt: new Date() };
+    db.createThread.mockResolvedValue(thread);
+    db.addMessage
+      .mockResolvedValueOnce({ id: "message-user", threadId: thread.id, userId: 1, role: "user", content: "Создай сайт", attachments: null, createdAt: new Date() })
+      .mockResolvedValueOnce({ id: "message-site", threadId: thread.id, userId: 1, role: "assistant", content: "<!doctype html><html><body>Site</body></html>", attachments: null, createdAt: new Date() });
+    llm.invokeLLM.mockResolvedValue({ choices: [{ message: { content: "<!doctype html><html><body>Site</body></html>" } }] });
+    storage.storagePut.mockResolvedValue({ key: "1/orbit/sites/site.html", url: "https://storage.example/site.html" });
+
+    const result = await appRouter.createCaller(userContext(1)).assistant.send({ content: "Создай сайт", attachments: [], mode: "website", modelId: "orbit-intelligence" });
+
+    expect(llm.invokeLLM).toHaveBeenCalledWith(expect.not.objectContaining({ model: "orbit-intelligence" }));
+    expect(storage.storagePut).toHaveBeenCalledWith(expect.stringContaining("1/orbit/sites/"), expect.any(Buffer), "text/html");
+    expect(result.mode).toBe("website");
+  });
+
+  it("keeps generated images inline in the assistant conversation", async () => {
+    const thread = { id: "thread-image", userId: 1, agentId: null, title: "Изображение", modelId: null, createdAt: new Date(), updatedAt: new Date() };
+    db.createThread.mockResolvedValue(thread);
+    db.addMessage
+      .mockResolvedValueOnce({ id: "message-user", threadId: thread.id, userId: 1, role: "user", content: "Создай изображение", attachments: null, createdAt: new Date() })
+      .mockResolvedValueOnce({ id: "message-image", threadId: thread.id, userId: 1, role: "assistant", content: "Готово", attachments: [], createdAt: new Date() });
+    imageService.generateImage.mockResolvedValue({ url: "https://storage.example/orbit-image.png" });
+
+    const result = await appRouter.createCaller(userContext(1)).assistant.send({ content: "Создай изображение", attachments: [], mode: "image" });
+
+    expect(imageService.generateImage).toHaveBeenCalledWith({ prompt: "Создай изображение" });
+    expect(db.addMessage).toHaveBeenNthCalledWith(2, expect.objectContaining({ attachments: [expect.objectContaining({ kind: "generated", mimeType: "image/png" })] }));
+    expect(result.mode).toBe("image");
+  });
+
+  it("passes the current user through agent save/archive and history creation", async () => {
+    db.saveAgent.mockResolvedValue({ id: "agent-1", userId: 1, name: "Researcher" });
+    db.createThread.mockResolvedValue({ id: "thread-2", userId: 1, title: "Research" });
+    const caller = appRouter.createCaller(userContext(1));
+
+    await caller.agents.save({ name: "Researcher", systemPrompt: "Проверяй источники и формируй краткие выводы.", memoryEnabled: true });
+    await caller.agents.archive({ id: "agent-1" });
+    await caller.history.create({ title: "Research" });
+
+    expect(db.saveAgent).toHaveBeenCalledWith(expect.objectContaining({ userId: 1, name: "Researcher" }));
+    expect(db.archiveAgent).toHaveBeenCalledWith(1, "agent-1");
+    expect(db.createThread).toHaveBeenCalledWith(expect.objectContaining({ userId: 1, title: "Research" }));
+  });
+
+  it("stores a safe user-scoped attachment and transcribes its signed URL", async () => {
+    storage.storagePut.mockResolvedValue({ key: "1/orbit/note.txt", url: "https://storage.example/note.txt" });
+    db.saveFile.mockResolvedValue({ id: "file-1", userId: 1, name: "note.txt", storageKey: "1/orbit/note.txt", url: "https://storage.example/note.txt", mimeType: "text/plain", size: 2 });
+    storage.storageGetSignedUrl.mockResolvedValue("https://signed.example/audio.webm");
+    voiceService.transcribeAudio.mockResolvedValue({ text: "Проверенный текст" });
+    const caller = appRouter.createCaller(userContext(1));
+
+    await caller.files.upload({ name: "note.txt", mimeType: "text/plain", base64: "data:text/plain;base64,SGk=" });
+    const transcript = await caller.files.transcribe({ storageKey: "1/orbit/audio.webm", language: "ru" });
+
+    expect(storage.storagePut).toHaveBeenCalledWith(expect.stringContaining("1/orbit/"), expect.any(Buffer), "text/plain");
+    expect(db.saveFile).toHaveBeenCalledWith(expect.objectContaining({ userId: 1, name: "note.txt", size: 2 }));
+    expect(voiceService.transcribeAudio).toHaveBeenCalledWith({ audioUrl: "https://signed.example/audio.webm", language: "ru" });
+    expect(transcript).toEqual({ text: "Проверенный текст" });
   });
 });

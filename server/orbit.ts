@@ -1,4 +1,6 @@
-import type { OrbitAttachment } from "@shared/orbit";
+import { ORBIT_CREATION_MODES, type OrbitAttachment, type OrbitTaskMode } from "@shared/orbit";
+export { ORBIT_CREATION_MODES } from "@shared/orbit";
+export type { OrbitTaskMode } from "@shared/orbit";
 
 type PromptConfig = {
   defaultPrompt?: string | null;
@@ -6,6 +8,7 @@ type PromptConfig = {
   agentName?: string | null;
   memoryNotes: Array<{ content: string }>;
 };
+
 
 export function titleFromMessage(content: string): string {
   const normalized = content.replace(/\s+/g, " ").trim();
@@ -37,11 +40,25 @@ export function buildAssistantInstructions({
     .join("\n\n");
 }
 
-export function isImageRequest(content: string, mode: "chat" | "image") {
+export function isImageRequest(content: string, mode: OrbitTaskMode) {
   if (mode === "image") return true;
   return /(^|\s)(создай|сгенерируй|нарисуй|generate|create)\s+(?:мне\s+)?(?:изображение|картинк|image|illustration)/i.test(
     content,
   );
+}
+
+export function buildWebsiteInstructions(baseInstructions: string) {
+  return [
+    baseInstructions,
+    "Режим создания сайта: подготовьте один автономный, адаптивный HTML-документ для запроса пользователя.",
+    "Верните полный документ от <!doctype html> до </html> без Markdown-ограждений. Включайте стили и небольшой JavaScript только внутри документа.",
+    "Не добавляйте внешние ключи, фиктивные отзывы, платёжные формы или утверждения о публикации. После HTML кратко укажите, как открыть сохранённый файл.",
+  ].join("\n\n");
+}
+
+export function extractHtmlArtifact(content: string) {
+  const match = content.match(/<!doctype html[\s\S]*?<\/html>/i) ?? content.match(/<html[\s\S]*?<\/html>/i);
+  return match?.[0] ?? null;
 }
 
 export function safeFileName(name: string): string {

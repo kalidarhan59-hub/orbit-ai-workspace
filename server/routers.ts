@@ -26,7 +26,7 @@ import {
   saveSettings,
   touchThread,
 } from "./db";
-import { buildAssistantInstructions, formatAttachmentContext, isImageRequest, safeFileName, titleFromMessage } from "./orbit";
+import { buildAssistantInstructions, buildWebsiteInstructions, extractHtmlArtifact, formatAttachmentContext, isImageRequest, safeFileName, titleFromMessage } from "./orbit";
 import { storageGetSignedUrl, storagePut } from "./storage";
 import { createLocalAccount, getLocalAccountUser } from "./db";
 import { hashPassword, localOpenId, normalizeUsername, verifyPassword } from "./localAuth";
@@ -100,11 +100,14 @@ export const appRouter = router({
   assistant: router({
     models: protectedProcedure.query(async () => {
       const { data } = await listLLMModels();
-      return data.map((model) => ({ id: model.id, provider: model.id.split("-")[0] ?? "AI" }));
+      return [
+        { id: "orbit-intelligence", label: "ORBIT Intelligence", provider: "ORBIT", description: "Оптимальный встроенный режим: самостоятельно выбирает доступную интегрированную модель." },
+        ...data.map((model) => ({ id: model.id, label: model.id, provider: model.id.split("-")[0] ?? "AI", description: "Доступная интегрированная модель" })),
+      ];
     }),
     imageModels: protectedProcedure.query(async () => (await listImageModels()).models),
     send: protectedProcedure
-      .input(z.object({ threadId: z.string().optional(), agentId: z.string().optional(), modelId: z.string().optional(), content: z.string().min(1).max(12000), attachments: z.array(attachmentSchema).max(5).default([]), mode: z.enum(["chat", "image"]).default("chat") }))
+      .input(z.object({ threadId: z.string().optional(), agentId: z.string().optional(), modelId: z.string().optional(), content: z.string().min(1).max(12000), attachments: z.array(attachmentSchema).max(5).default([]), mode: z.enum(["chat", "image", "website"]).default("chat") }))
       .mutation(async ({ ctx, input }) => {
         const userId = ctx.user.id;
         const existingThread = input.threadId ? await getThread(userId, input.threadId) : undefined;
@@ -139,15 +142,17 @@ export const appRouter = router({
           listMessages(userId, thread.id),
         ]);
         if (input.agentId && !agent) throw new TRPCError({ code: "NOT_FOUND", message: "Агент не найден или недоступен." });
-        const instructions = buildAssistantInstructions({
+        const baseInstructions = buildAssistantInstructions({
           defaultPrompt: settings?.defaultSystemPrompt,
           agentPrompt: agent?.systemPrompt,
           agentName: agent?.name,
           memoryNotes: agent?.memoryEnabled ? memory.slice(0, 10) : [],
         });
+        const instructions = input.mode === "website" ? buildWebsiteInstructions(baseInstructions) : baseInstructions;
         const modelMessages = await buildModelMessages({ history, instructions });
         try {
-          const selectedModel = input.modelId || agent?.modelId || settings?.defaultModel;
+          const preferredModel = input.modelId || agent?.modelId || settings?.defaultModel;
+          const selectedModel = preferredModel === "orbit-intelligence" ? undefined : preferredModel;
           const response = await invokeLLM({
             ...(selectedModel ? { model: selectedModel } : {}),
             messages: modelMessages as any,
@@ -156,9 +161,19 @@ export const appRouter = router({
           const content = typeof responseContent === "string" && responseContent.trim()
             ? responseContent.trim()
             : "Модель не вернула текстовый ответ.";
-          const assistantMessage = await addMessage({ userId, threadId: thread.id, role: "assistant", content });
+          const websiteHtml = input.mode === "website" ? extractHtmlArtifact(content) : null;
+          const generatedSite = websiteHtml
+            ? await storagePut(`${userId}/orbit/sites/${Date.now()}-orbit-site.html`, Buffer.from(websiteHtml, "utf8"), "text/html")
+            : null;
+          const assistantMessage = await addMessage({
+            userId,
+            threadId: thread.id,
+            role: "assistant",
+            content,
+            attachments: generatedSite ? [{ name: "orbit-site.html", url: generatedSite.url, key: generatedSite.key, mimeType: "text/html", size: Buffer.byteLength(websiteHtml ?? ""), kind: "generated" }] : undefined,
+          });
           await touchThread(userId, thread.id);
-          return { thread, userMessage, assistantMessage, mode: "chat" as const };
+          return { thread, userMessage, assistantMessage, mode: input.mode === "website" ? "website" as const : "chat" as const };
         } catch (error) {
           console.error("[ORBIT] LLM response failed", error);
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Модель временно недоступна. Сообщение сохранено, попробуйте повторить запрос." });

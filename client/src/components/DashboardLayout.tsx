@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Bot, FileText, History, LogOut, MessageSquareText, Orbit, PanelLeft, Settings } from "lucide-react";
+import { Bot, FileText, History, LogOut, MessageSquareText, Mic, Orbit, PanelLeft, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -28,6 +28,7 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: MessageSquareText, label: "Chat", path: "/app" },
+  { icon: Mic, label: "Voice Chat", path: "/app/voice" },
   { icon: Bot, label: "Agents", path: "/app/agents" },
   { icon: History, label: "History", path: "/app/history" },
   { icon: FileText, label: "Files", path: "/app/files" },

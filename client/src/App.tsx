@@ -11,6 +11,7 @@ import History from "./pages/History";
 import Files from "./pages/Files";
 import Settings from "./pages/Settings";
 import Chat from "./pages/Chat";
+import VoiceChat from "./pages/VoiceChat";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -19,6 +20,7 @@ function Router() {
       <Route path={"/"} component={Auth} />
       <Route path={"/app"} component={Chat} />
       <Route path={"/app/chat/:threadId"} component={Chat} />
+      <Route path={"/app/voice"} component={VoiceChat} />
       <Route path={"/app/agents"} component={Agents} />
       <Route path={"/app/history"} component={History} />
       <Route path={"/app/files"} component={Files} />

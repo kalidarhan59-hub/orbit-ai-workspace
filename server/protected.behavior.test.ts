@@ -160,12 +160,22 @@ describe("ORBIT protected procedure behavior", () => {
     voiceService.transcribeAudio.mockResolvedValue({ text: "Проверенный текст" });
     const caller = appRouter.createCaller(userContext(1));
 
-    await caller.files.upload({ name: "note.txt", mimeType: "text/plain", base64: "data:text/plain;base64,SGk=" });
+    await caller.files.upload({ name: "Заметка.txt", mimeType: "text/plain", base64: "data:text/plain;base64,SGk=" });
     const transcript = await caller.files.transcribe({ storageKey: "1/orbit/audio.webm", language: "ru" });
 
-    expect(storage.storagePut).toHaveBeenCalledWith(expect.stringContaining("1/orbit/"), expect.any(Buffer), "text/plain");
-    expect(db.saveFile).toHaveBeenCalledWith(expect.objectContaining({ userId: 1, name: "note.txt", size: 2 }));
+    expect(storage.storagePut).toHaveBeenCalledWith(expect.stringMatching(/^1\/orbit\/\d+-[\x00-\x7F]+$/), expect.any(Buffer), "text/plain");
+    expect(db.saveFile).toHaveBeenCalledWith(expect.objectContaining({ userId: 1, name: "Заметка.txt", size: 2 }));
     expect(voiceService.transcribeAudio).toHaveBeenCalledWith({ audioUrl: "https://signed.example/audio.webm", language: "ru" });
     expect(transcript).toEqual({ text: "Проверенный текст" });
+  });
+
+  it("uses a storage-key signed URL for WebM audio and converts a provider failure into an actionable transcription error", async () => {
+    storage.storageGetSignedUrl.mockResolvedValue("https://signed.example/recording.webm");
+    voiceService.transcribeAudio.mockResolvedValue({ error: "Transcription service request failed", code: "TRANSCRIPTION_FAILED", details: "502 upstream" });
+
+    await expect(appRouter.createCaller(userContext(1)).files.transcribe({ storageKey: "1/orbit/recording.webm", language: "ru" }))
+      .rejects.toMatchObject({ code: "BAD_REQUEST", message: "Не удалось распознать голосовую запись. Попробуйте сказать фразу ещё раз или загрузите аудио в формате webm, mp3, wav, ogg или m4a." });
+    expect(storage.storageGetSignedUrl).toHaveBeenCalledWith("1/orbit/recording.webm");
+    expect(voiceService.transcribeAudio).toHaveBeenCalledWith({ audioUrl: "https://signed.example/recording.webm", language: "ru" });
   });
 });

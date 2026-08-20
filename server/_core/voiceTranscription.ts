@@ -104,7 +104,7 @@ export async function transcribeAudio(
       }
       
       audioBuffer = Buffer.from(await response.arrayBuffer());
-      mimeType = response.headers.get('content-type') || 'audio/mpeg';
+      mimeType = normalizeAudioMimeType(response.headers.get('content-type') || 'audio/mpeg');
       
       // Check file size (16MB limit)
       const sizeMB = audioBuffer.length / (1024 * 1024);
@@ -197,7 +197,11 @@ export async function transcribeAudio(
 /**
  * Helper function to get file extension from MIME type
  */
-function getFileExtension(mimeType: string): string {
+export function normalizeAudioMimeType(mimeType: string): string {
+  return mimeType.split(";", 1)[0]?.trim().toLowerCase() || "audio/mpeg";
+}
+
+export function getFileExtension(mimeType: string): string {
   const mimeToExt: Record<string, string> = {
     'audio/webm': 'webm',
     'audio/mp3': 'mp3',

@@ -54,6 +54,19 @@ export function safeFileName(name: string): string {
   return trimmed.slice(0, 120) || "attachment";
 }
 
+/**
+ * Storage presigning accepts ASCII paths only. Keep the original readable name
+ * for the user, but encode every non-safe path character deterministically.
+ */
+export function safeStorageFileName(name: string): string {
+  const encoded = Array.from(safeFileName(name).normalize("NFKC"))
+    .map((character) => /[A-Za-z0-9._-]/.test(character) ? character : `-${character.codePointAt(0)?.toString(16)}-`)
+    .join("")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$|\.{2,}/g, "");
+  return encoded.slice(0, 180) || "attachment";
+}
+
 export function formatAttachmentContext(attachments: OrbitAttachment[]) {
   if (!attachments.length) return "";
   return `\n\nВложенные материалы пользователя:\n${attachments

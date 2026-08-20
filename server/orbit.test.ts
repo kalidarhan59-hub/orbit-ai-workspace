@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAssistantInstructions, isImageRequest, ORBIT_CREATION_MODES, safeFileName, titleFromMessage } from "./orbit";
+import { buildAssistantInstructions, isImageRequest, ORBIT_CREATION_MODES, safeFileName, safeStorageFileName, titleFromMessage } from "./orbit";
 
 describe("ORBIT assistant helpers", () => {
   it("builds instructions with user, agent, and scoped memory", () => {
@@ -35,5 +35,12 @@ describe("ORBIT assistant helpers", () => {
     const instructions = buildAssistantInstructions({ memoryNotes: [] });
     expect(instructions).toContain("самодостаточный, копируемый код");
     expect(instructions).toContain("не заявляйте о публикации");
+  });
+
+  it("preserves a readable Unicode display filename while emitting an ASCII-only storage filename", () => {
+    expect(safeFileName("Отчёт за август 2026.pdf")).toBe("Отчёт за август 2026.pdf");
+    const storageName = safeStorageFileName("Отчёт за август 2026.pdf");
+    expect(storageName).toMatch(/^[\x00-\x7F]+$/);
+    expect(storageName).toContain(".pdf");
   });
 });

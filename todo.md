@@ -51,3 +51,19 @@
 - [x] Verify the complete desktop preview has no white outer shell, no low-contrast text, and no clipped workspace layout.
 - [x] Record a final post-restart desktop inspection confirming dark root and shell surfaces, readable contrast, and an unclipped workspace layout.
 - [x] Confirm the written dark-theme inspection record and checkpoint it with the hard-dark shell fix.
+- [x] Fix storage presign failures caused by Cyrillic or non-ASCII attachment names.
+- [x] Add regression tests proving display names may remain Unicode while storage paths are ASCII-only.
+- [ ] Verify attachment upload succeeds with a Cyrillic filename.
+- [x] Diagnose the transcription service request failure for microphone recordings.
+- [x] Correct audio URL or storage-key handling and return actionable transcription errors.
+- [x] Add a regression test for the protected transcription route, including signed-URL WebM audio and actionable provider failure output.
+- [ ] Verify the microphone auto-send flow with a real recording after the transcription fix.
+- [x] Add a browser speech-recognition fallback that automatically sends recognized text if the remote transcription provider is unavailable.
+- [x] Add a Voice Chat section to the left navigation and protected routing.
+- [x] Build a dark voice-conversation screen with a central interactive orbit control and clear listening/thinking/speaking states.
+- [x] Connect speech recognition, ORBIT Intelligence replies, and in-browser speech synthesis for hands-free conversation.
+- [x] Provide transcript visibility, browser capability fallbacks, stop controls, and accessible status announcements.
+- [x] Test voice-chat navigation, responsive state rendering, answer panels, and voice-synthesis fallback behavior.
+- [ ] Manually verify a real Voice Chat conversation with microphone permission and audible speech synthesis in a supported browser.
+- [x] Add focused coverage for the no-speech-synthesis fallback and document text-only answer behavior.
+- [x] Document the Voice Chat text-only fallback when browser speech synthesis is unavailable.

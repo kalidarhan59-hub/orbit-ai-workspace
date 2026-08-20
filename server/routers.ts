@@ -26,7 +26,7 @@ import {
   saveSettings,
   touchThread,
 } from "./db";
-import { buildAssistantInstructions, formatAttachmentContext, isImageRequest, safeFileName, titleFromMessage } from "./orbit";
+import { buildAssistantInstructions, formatAttachmentContext, isImageRequest, safeFileName, safeStorageFileName, titleFromMessage } from "./orbit";
 import { storageGetSignedUrl, storagePut } from "./storage";
 import { createLocalAccount, getLocalAccountUser } from "./db";
 import { hashPassword, localOpenId, normalizeUsername, verifyPassword } from "./localAuth";
@@ -192,14 +192,18 @@ export const appRouter = router({
       if (buffer.length === 0 || buffer.length > 16 * 1024 * 1024) throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: "Файл должен быть не больше 16 МБ." });
       if (!/^(image\/|audio\/|video\/|text\/|application\/(pdf|json|csv))/.test(input.mimeType)) throw new TRPCError({ code: "UNSUPPORTED_MEDIA_TYPE", message: "Этот формат пока не поддерживается." });
       const name = safeFileName(input.name);
-      const stored = await storagePut(`${ctx.user.id}/orbit/${Date.now()}-${name}`, buffer, input.mimeType);
+      const storageName = safeStorageFileName(input.name);
+      const stored = await storagePut(`${ctx.user.id}/orbit/${Date.now()}-${storageName}`, buffer, input.mimeType);
       const file = await saveFile({ userId: ctx.user.id, threadId: input.threadId, name, storageKey: stored.key, url: stored.url, mimeType: input.mimeType, size: buffer.length });
       return { ...file, kind: "upload" as const };
     }),
     transcribe: protectedProcedure.input(z.object({ audioUrl: z.string().min(1).optional(), storageKey: z.string().min(1).optional(), language: z.string().max(12).optional() }).refine((value) => value.audioUrl || value.storageKey, { message: "Укажите аудиофайл для распознавания." })).mutation(async ({ input }) => {
       const audioUrl = input.storageKey ? await storageGetSignedUrl(input.storageKey) : input.audioUrl!;
       const result = await transcribeAudio({ audioUrl, language: input.language ?? "ru" });
-      if ("error" in result) throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
+      if ("error" in result) {
+        console.error("[ORBIT] Transcription failed", { code: result.code, details: result.details });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Не удалось распознать голосовую запись. Попробуйте сказать фразу ещё раз или загрузите аудио в формате webm, mp3, wav, ogg или m4a." });
+      }
       return result;
     }),
   }),

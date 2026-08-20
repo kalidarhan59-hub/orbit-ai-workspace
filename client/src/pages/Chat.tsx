@@ -34,6 +34,8 @@ export default function Chat() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const browserTranscriptRef = useRef("");
+  const browserRecognitionRef = useRef<{ stop: () => void } | null>(null);
   const [input, setInput] = useState("");
   const [agentId, setAgentId] = useState("");
   const [modelId, setModelId] = useState("");
@@ -100,26 +102,60 @@ export default function Chat() {
 
   const chooseFile = async (file?: File) => { const uploaded = await uploadFile(file); if (uploaded) setAttachments((items) => [...items, uploaded].slice(0, 5)); if (fileInputRef.current) fileInputRef.current.value = ""; };
 
+  const beginBrowserTranscriptFallback = () => {
+    const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Recognition) return;
+    try {
+      browserTranscriptRef.current = "";
+      const recognition = new Recognition();
+      recognition.lang = "ru-RU";
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.onresult = (event: any) => {
+        browserTranscriptRef.current = Array.from(event.results as any)
+          .slice(event.resultIndex)
+          .filter((result: any) => result.isFinal)
+          .map((result: any) => result[0]?.transcript ?? "")
+          .join(" ")
+          .trim();
+      };
+      recognition.start();
+      browserRecognitionRef.current = recognition;
+    } catch { browserRecognitionRef.current = null; }
+  };
+
   const startRecording = async () => {
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { toast.error("Этот браузер не поддерживает запись аудио."); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : undefined });
-      streamRef.current = stream; recorderRef.current = recorder; chunksRef.current = [];
+      streamRef.current = stream; recorderRef.current = recorder; chunksRef.current = []; beginBrowserTranscriptFallback();
       recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); };
       recorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
+        browserRecognitionRef.current?.stop();
+        browserRecognitionRef.current = null;
         setIsRecording(false); setIsTranscribing(true);
+        let recordedAttachment: OrbitAttachment | null = null;
         try {
-          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-          const audio = new File([blob], `голосовое-сообщение-${Date.now()}.webm`, { type: blob.type || "audio/webm" });
-          const stored = await uploadFile(audio);
-          if (!stored) return;
-          const transcript = await transcribe.mutateAsync({ storageKey: stored.key, language: "ru" });
+          const audioMime = (recorder.mimeType || "audio/webm").split(";", 1)[0] || "audio/webm";
+          const blob = new Blob(chunksRef.current, { type: audioMime });
+          const audio = new File([blob], `голосовое-сообщение-${Date.now()}.webm`, { type: audioMime });
+          recordedAttachment = await uploadFile(audio);
+          if (!recordedAttachment) return;
+          const transcript = await transcribe.mutateAsync({ storageKey: recordedAttachment.key, language: "ru" });
           if (!transcript.text?.trim()) { toast.error("Не удалось распознать речь. Попробуйте ещё раз."); return; }
           toast.success("Речь распознана и отправлена в ORBIT.");
-          await sendMessage(transcript.text, [stored], "chat");
-        } catch (error) { toast.error(error instanceof Error ? error.message : "Не удалось распознать аудио."); }
+          await sendMessage(transcript.text, [recordedAttachment], "chat");
+        } catch (error) {
+          const fallbackTranscript = browserTranscriptRef.current.trim();
+          if (fallbackTranscript) {
+            toast.info("Системная транскрипция недоступна — использована расшифровка браузера.");
+            await sendMessage(fallbackTranscript, recordedAttachment ? [recordedAttachment] : [], "chat");
+          } else {
+            toast.error(error instanceof Error ? error.message : "Не удалось распознать аудио.");
+          }
+        }
         finally { setIsTranscribing(false); }
       };
       recorder.start(); setIsRecording(true);

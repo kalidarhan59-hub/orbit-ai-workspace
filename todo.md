@@ -30,7 +30,7 @@
 - [x] Remove the Google sign-in control and all deferred Google OAuth references from the authentication experience.
 - [x] Test local registration, credential verification, session issuance, and protected-route redirect behavior through router tests and an unauthenticated browser session.
 - [ ] Manually verify authenticated flows with a real local account: create an agent, send chat, upload an attachment, trigger voice transcription auto-send, generate an inline image, and resume history.
-- [x] Add targeted tests for authenticated agent save/archive, history creation, file upload, image-generation, website-generation, and transcription routes.
+- [x] Add targeted tests for authenticated agent save/archive, history creation, file upload, image-generation, and transcription routes; previous website-route tests were retired with the feature.
 - [x] Remove app-side artificial message or generation quotas while preserving provider error handling and safe payload limits.
 - [x] Create and integrate an original ORBIT logo and avatar as web-hosted static assets.
 - [x] Add explicit creation modes for chat, image generation, and website generation.
@@ -38,10 +38,11 @@
 - [x] Present available model choices clearly without implying unsupported third-party model access.
 - [x] Test image and website-generation interactions, mode selection, and output rendering.
 - [x] Audit and document the absence of app-side message or generation quota logic while retaining safe payload and file-size safeguards.
-- [ ] Manually verify authenticated image and website-generation flows with a real local account, including inline image rendering and downloadable HTML artifacts.
+- [ ] Manually verify authenticated inline image generation with a real local account; code and HTML requests remain standard Intelligence chat responses.
 - [x] Add focused coverage for the shared client/server creation-mode contract and keep visual validation for the mode controls.
 - [x] Diagnose and fix the reported light-theme regression so ORBIT always renders dark in the workspace.
 - [x] Remove the separate website-generation mode, control, prompt card, HTML artifact path, and related presentation copy.
 - [x] Preserve code and HTML generation as normal ORBIT Intelligence chat output rather than a standalone website tool.
+- [x] Add and verify an explicit Intelligence instruction for copyable code responses without publication claims.
 - [x] Verify the dark theme and the simplified Intelligence/Image composer on desktop.
 - [x] Verify the dark theme and simplified composer at the mobile breakpoint.

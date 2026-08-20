@@ -30,4 +30,10 @@ describe("ORBIT assistant helpers", () => {
   it("keeps the intelligence and image mode contract explicit", () => {
     expect(ORBIT_CREATION_MODES).toEqual(["chat", "image"]);
   });
+
+  it("asks regular Intelligence chat to return copyable code rather than claim a site was published", () => {
+    const instructions = buildAssistantInstructions({ memoryNotes: [] });
+    expect(instructions).toContain("самодостаточный, копируемый код");
+    expect(instructions).toContain("не заявляйте о публикации");
+  });
 });

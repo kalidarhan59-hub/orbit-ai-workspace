@@ -124,22 +124,6 @@ describe("ORBIT protected procedure behavior", () => {
     expect(models).toContainEqual(expect.objectContaining({ id: "integrated-model" }));
   });
 
-  it("creates a downloadable HTML artifact in website mode", async () => {
-    const thread = { id: "thread-site", userId: 1, agentId: null, title: "Сайт", modelId: null, createdAt: new Date(), updatedAt: new Date() };
-    db.createThread.mockResolvedValue(thread);
-    db.addMessage
-      .mockResolvedValueOnce({ id: "message-user", threadId: thread.id, userId: 1, role: "user", content: "Создай сайт", attachments: null, createdAt: new Date() })
-      .mockResolvedValueOnce({ id: "message-site", threadId: thread.id, userId: 1, role: "assistant", content: "<!doctype html><html><body>Site</body></html>", attachments: null, createdAt: new Date() });
-    llm.invokeLLM.mockResolvedValue({ choices: [{ message: { content: "<!doctype html><html><body>Site</body></html>" } }] });
-    storage.storagePut.mockResolvedValue({ key: "1/orbit/sites/site.html", url: "https://storage.example/site.html" });
-
-    const result = await appRouter.createCaller(userContext(1)).assistant.send({ content: "Создай сайт", attachments: [], mode: "website", modelId: "orbit-intelligence" });
-
-    expect(llm.invokeLLM).toHaveBeenCalledWith(expect.not.objectContaining({ model: "orbit-intelligence" }));
-    expect(storage.storagePut).toHaveBeenCalledWith(expect.stringContaining("1/orbit/sites/"), expect.any(Buffer), "text/html");
-    expect(result.mode).toBe("website");
-  });
-
   it("keeps generated images inline in the assistant conversation", async () => {
     const thread = { id: "thread-image", userId: 1, agentId: null, title: "Изображение", modelId: null, createdAt: new Date(), updatedAt: new Date() };
     db.createThread.mockResolvedValue(thread);

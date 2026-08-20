@@ -40,3 +40,8 @@
 - [x] Audit and document the absence of app-side message or generation quota logic while retaining safe payload and file-size safeguards.
 - [ ] Manually verify authenticated image and website-generation flows with a real local account, including inline image rendering and downloadable HTML artifacts.
 - [x] Add focused coverage for the shared client/server creation-mode contract and keep visual validation for the mode controls.
+- [x] Diagnose and fix the reported light-theme regression so ORBIT always renders dark in the workspace.
+- [x] Remove the separate website-generation mode, control, prompt card, HTML artifact path, and related presentation copy.
+- [x] Preserve code and HTML generation as normal ORBIT Intelligence chat output rather than a standalone website tool.
+- [x] Verify the dark theme and the simplified Intelligence/Image composer on desktop.
+- [x] Verify the dark theme and simplified composer at the mobile breakpoint.

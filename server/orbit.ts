@@ -47,19 +47,6 @@ export function isImageRequest(content: string, mode: OrbitTaskMode) {
   );
 }
 
-export function buildWebsiteInstructions(baseInstructions: string) {
-  return [
-    baseInstructions,
-    "Режим создания сайта: подготовьте один автономный, адаптивный HTML-документ для запроса пользователя.",
-    "Верните полный документ от <!doctype html> до </html> без Markdown-ограждений. Включайте стили и небольшой JavaScript только внутри документа.",
-    "Не добавляйте внешние ключи, фиктивные отзывы, платёжные формы или утверждения о публикации. После HTML кратко укажите, как открыть сохранённый файл.",
-  ].join("\n\n");
-}
-
-export function extractHtmlArtifact(content: string) {
-  const match = content.match(/<!doctype html[\s\S]*?<\/html>/i) ?? content.match(/<html[\s\S]*?<\/html>/i);
-  return match?.[0] ?? null;
-}
 
 export function safeFileName(name: string): string {
   const trimmed = name.trim().replace(/[\\/:*?"<>|]/g, "-");

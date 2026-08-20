@@ -8,6 +8,6 @@ export type OrbitAttachment = {
   kind?: "upload" | "generated";
 };
 
-export const ORBIT_CREATION_MODES = ["chat", "image", "website"] as const;
+export const ORBIT_CREATION_MODES = ["chat", "image"] as const;
 export type OrbitTaskMode = (typeof ORBIT_CREATION_MODES)[number];
 export type OrbitMessageRole = "user" | "assistant";

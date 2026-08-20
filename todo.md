@@ -46,3 +46,8 @@
 - [x] Add and verify an explicit Intelligence instruction for copyable code responses without publication claims.
 - [x] Verify the dark theme and the simplified Intelligence/Image composer on desktop.
 - [x] Verify the dark theme and simplified composer at the mobile breakpoint.
+- [x] Diagnose why the outer dashboard shell can render with light semantic tokens while the chat panel is dark.
+- [x] Lock the dark class and dark color tokens before first application render, including the HTML root and full dashboard shell.
+- [x] Verify the complete desktop preview has no white outer shell, no low-contrast text, and no clipped workspace layout.
+- [x] Record a final post-restart desktop inspection confirming dark root and shell surfaces, readable contrast, and an unclipped workspace layout.
+- [x] Confirm the written dark-theme inspection record and checkpoint it with the hard-dark shell fix.

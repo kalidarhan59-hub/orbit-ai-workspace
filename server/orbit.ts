@@ -10,6 +10,25 @@ type PromptConfig = {
 };
 
 
+export const MANUS_PROFILE_MODELS = {
+  "manus-1.6-max": "claude-opus-4-7",
+  "manus-1.6-lite": "gpt-5-mini",
+} as const;
+
+export function resolveModelId(modelId: string | undefined): string | undefined {
+  if (!modelId || modelId === "orbit-intelligence") return undefined;
+  return MANUS_PROFILE_MODELS[modelId as keyof typeof MANUS_PROFILE_MODELS] || modelId;
+}
+
+export function buildModelCatalog(availableIds: string[]) {
+  const available = new Set(availableIds);
+  const profiles = [
+    available.has(MANUS_PROFILE_MODELS["manus-1.6-max"]) ? { id: "manus-1.6-max", label: "Manus 1.6 Max", provider: "Manus", description: "Максимальный профиль ORBIT на базе доступной сильной модели." } : null,
+    available.has(MANUS_PROFILE_MODELS["manus-1.6-lite"]) ? { id: "manus-1.6-lite", label: "Manus 1.6 Lite", provider: "Manus", description: "Быстрый и экономичный профиль ORBIT для повседневных задач." } : null,
+  ].filter((profile): profile is { id: string; label: string; provider: string; description: string } => Boolean(profile));
+  return profiles;
+}
+
 export function titleFromMessage(content: string): string {
   const normalized = content.replace(/\s+/g, " ").trim();
   return normalized.length > 72 ? `${normalized.slice(0, 69)}…` : normalized || "Новая беседа";

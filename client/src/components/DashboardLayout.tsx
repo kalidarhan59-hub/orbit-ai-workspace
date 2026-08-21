@@ -144,7 +144,7 @@ function DashboardLayoutContent({
     <>
       <div className="relative" ref={sidebarRef}>
         <Sidebar
-          collapsible="icon"
+          collapsible="offcanvas"
           className="border-r border-white/[0.08] bg-[#0b1020] text-slate-100"
           disableTransition={isResizing}
         >
@@ -230,8 +230,15 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset className="min-w-0 bg-[#070b16] text-slate-100">
+        <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/[0.08] bg-[#070b16]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" aria-label="Показать или скрыть меню" />
+            <span className="text-sm text-muted-foreground">{activeMenuItem?.label ?? "ORBIT"}</span>
+          </div>
+          <div className="flex items-center gap-2" />
+        </div>
         {isMobile && (
-          <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/[0.08] bg-[#070b16]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+          <div className="hidden">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">

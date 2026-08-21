@@ -6,7 +6,7 @@ export function hasSpeechSynthesis(target: unknown): target is { speechSynthesis
   return typeof synthesis?.speak === "function" && typeof synthesis.cancel === "function";
 }
 
-const maleVoiceHints = /male|man|муж|мужск|dmitry|dmitri|yuri|yuriy|alex|aleks|pavel|paul|google русский муж|microsoft.*david|microsoft.*mark/i;
+const maleVoiceHints = /male|man|муж|мужск|dmitry|dmitri|yuri|yuriy|alex|aleks|pavel|paul|artem|bogdan|mikhail|michael|google русский муж|microsoft.*(david|mark|pavel|dmitry|yuri|online.*natural)/i;
 const femaleVoiceHints = /female|woman|жен|женск|milena|alena|elena|katya|irina|google.*жен|microsoft.*zira/i;
 
 export function isLikelyMaleVoice(voice: SpeechSynthesisVoice): boolean {

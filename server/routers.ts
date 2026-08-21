@@ -26,7 +26,7 @@ import {
   saveSettings,
   touchThread,
 } from "./db";
-import { buildAssistantInstructions, formatAttachmentContext, isImageRequest, safeFileName, safeStorageFileName, titleFromMessage } from "./orbit";
+import { buildAssistantInstructions, buildModelCatalog, formatAttachmentContext, isImageRequest, resolveModelId, safeFileName, safeStorageFileName, titleFromMessage } from "./orbit";
 import { storageGetSignedUrl, storagePut } from "./storage";
 import { createLocalAccount, getLocalAccountUser } from "./db";
 import { hashPassword, localOpenId, normalizeUsername, verifyPassword } from "./localAuth";
@@ -100,8 +100,10 @@ export const appRouter = router({
   assistant: router({
     models: protectedProcedure.query(async () => {
       const { data } = await listLLMModels();
+      const profiles = buildModelCatalog(data.map((model) => model.id));
       return [
         { id: "orbit-intelligence", label: "ORBIT Intelligence", provider: "ORBIT", description: "Оптимальный встроенный режим: самостоятельно выбирает доступную интегрированную модель." },
+        ...profiles,
         ...data.map((model) => ({ id: model.id, label: model.id, provider: model.id.split("-")[0] ?? "AI", description: "Доступная интегрированная модель" })),
       ];
     }),
@@ -149,9 +151,9 @@ export const appRouter = router({
           memoryNotes: agent?.memoryEnabled ? memory.slice(0, 10) : [],
         });
         const modelMessages = await buildModelMessages({ history, instructions });
-        try {
-          const preferredModel = input.modelId || agent?.modelId || settings?.defaultModel;
-          const selectedModel = preferredModel === "orbit-intelligence" ? undefined : preferredModel;
+          try {
+            const preferredModel = input.modelId || agent?.modelId || settings?.defaultModel;
+            const selectedModel = resolveModelId(preferredModel || undefined);
           const response = await invokeLLM({
             ...(selectedModel ? { model: selectedModel } : {}),
             messages: modelMessages as any,

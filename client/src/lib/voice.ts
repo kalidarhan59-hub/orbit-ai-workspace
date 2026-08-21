@@ -37,6 +37,14 @@ export function findPreferredMaleVoice(voices: SpeechSynthesisVoice[]): SpeechSy
 }
 
 /** Converts an AI answer into clean spoken Russian without reading markup or punctuation aloud. */
+export function splitTextForSpeech(input: string): string[] {
+  return input
+    .replace(/```[\s\S]*?```/g, " Я подготовил код, он показан на экране. ")
+    .split(/(?:[.!?…]+|[\n\r]+|[;:]+)+/)
+    .map((part) => sanitizeTextForSpeech(part))
+    .filter((part) => part.length > 0);
+}
+
 export function sanitizeTextForSpeech(input: string): string {
   return input
     .replace(/```[\s\S]*?```/g, " Я подготовил код, он показан на экране. ")

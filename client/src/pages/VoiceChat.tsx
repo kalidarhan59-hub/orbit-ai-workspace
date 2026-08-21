@@ -2,7 +2,7 @@ import { OrbitPage } from "@/components/OrbitPage";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { findPreferredMaleVoice, hasSpeechSynthesis, isLikelyMaleVoice, sanitizeTextForSpeech, sortSystemVoices, VOICE_OUTPUT_UNAVAILABLE_MESSAGE } from "@/lib/voice";
+import { findPreferredMaleVoice, hasSpeechSynthesis, isLikelyMaleVoice, sanitizeTextForSpeech, sortSystemVoices, splitTextForSpeech, VOICE_OUTPUT_UNAVAILABLE_MESSAGE } from "@/lib/voice";
 import { AudioLines, Bot, Check, ChevronDown, MessageSquareText, Mic, Radio, Settings2, Sparkles, Square, Volume2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ export default function VoiceChat() {
   const streamRef = useRef<MediaStream | null>(null);
   const animationRef = useRef<number | null>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const speechRunRef = useRef(0);
   const utils = trpc.useUtils();
 
   const isActive = voiceState === "listening" || voiceState === "thinking" || voiceState === "speaking";
@@ -97,19 +98,25 @@ export default function VoiceChat() {
   const speak = (text: string) => {
     if (!hasSpeechSynthesis(window)) { setVoiceState("idle"); toast.info(VOICE_OUTPUT_UNAVAILABLE_MESSAGE); return; }
     window.speechSynthesis.cancel();
-    const spokenText = sanitizeTextForSpeech(text);
-    if (!spokenText) { setVoiceState("idle"); return; }
-    const utterance = new SpeechSynthesisUtterance(spokenText);
-    utterance.lang = "ru-RU";
-    utterance.rate = rate;
-    utterance.pitch = 1;
+    const chunks = splitTextForSpeech(text);
+    if (!chunks.length) { setVoiceState("idle"); return; }
+    const runId = ++speechRunRef.current;
     const voice = voices.find((item) => item.voiceURI === selectedVoice) || findPreferredMaleVoice(voices) || russianVoices[0];
-    if (voice) utterance.voice = voice;
-    utterance.onstart = () => setVoiceState("speaking");
-    utterance.onend = () => setVoiceState("idle");
-    utterance.onerror = () => setVoiceState("idle");
-    speechRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    let index = 0;
+    const speakNext = () => {
+      if (runId !== speechRunRef.current || index >= chunks.length) { if (runId === speechRunRef.current) setVoiceState("idle"); return; }
+      const utterance = new SpeechSynthesisUtterance(chunks[index++]);
+      utterance.lang = "ru-RU";
+      utterance.rate = Math.min(1.08, Math.max(0.88, rate));
+      utterance.pitch = 0.92;
+      if (voice) utterance.voice = voice;
+      utterance.onstart = () => setVoiceState("speaking");
+      utterance.onend = () => window.setTimeout(speakNext, 95);
+      utterance.onerror = () => { if (runId === speechRunRef.current) setVoiceState("idle"); };
+      speechRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    };
+    speakNext();
   };
 
   const submitTranscript = (text: string) => {
@@ -137,7 +144,7 @@ export default function VoiceChat() {
     } catch { stopAudioMeter(); setVoiceState("idle"); toast.error("Не удалось начать голосовой разговор."); }
   };
 
-  function stopAll() { recognitionRef.current?.abort(); recognitionRef.current = null; stopAudioMeter(); window.speechSynthesis?.cancel(); setVoiceState("idle"); }
+  function stopAll() { recognitionRef.current?.abort(); recognitionRef.current = null; stopAudioMeter(); speechRunRef.current += 1; window.speechSynthesis?.cancel(); setVoiceState("idle"); }
 
   const stateCopy: Record<VoiceState, { title: string; description: string }> = {
     idle: { title: "Готов слушать", description: "Нажмите на орбиту и говорите — ORBIT ответит голосом." },

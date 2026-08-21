@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findPreferredMaleVoice, hasSpeechSynthesis, sanitizeTextForSpeech, sortSystemVoices, VOICE_OUTPUT_UNAVAILABLE_MESSAGE } from "./voice";
+import { findPreferredMaleVoice, hasSpeechSynthesis, sanitizeTextForSpeech, sortSystemVoices, splitTextForSpeech, VOICE_OUTPUT_UNAVAILABLE_MESSAGE } from "./voice";
 
 describe("voice output fallback", () => {
   it("detects that a browser without speech synthesis must remain text-only", () => {
@@ -29,6 +29,10 @@ describe("browser voice selection", () => {
 });
 
 describe("spoken text sanitizer", () => {
+  it("splits long answers into natural speech phrases at sentence boundaries", () => {
+    expect(splitTextForSpeech("Привет! Как ваши дела? Я готов помочь.")).toEqual(["Привет", "Как ваши дела", "Я готов помочь"]);
+  });
+
   it("removes markup, punctuation symbols, urls, and code fences from spoken output", () => {
     const result = sanitizeTextForSpeech("## Ответ: готов! **Важно**, [ссылка](https://example.com) и `код`.\n```ts\nconst x = 1;\n```");
     expect(result).toContain("Ответ готов");

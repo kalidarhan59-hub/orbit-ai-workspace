@@ -67,3 +67,10 @@
 - [ ] Manually verify a real Voice Chat conversation with microphone permission and audible speech synthesis in a supported browser.
 - [x] Add focused coverage for the no-speech-synthesis fallback and document text-only answer behavior.
 - [x] Document the Voice Chat text-only fallback when browser speech synthesis is unavailable.
+
+- [x] Проанализировать архив orbit-voice.zip и определить, содержит ли он распознавание речи, синтез речи или готовый голосовой интерфейс.
+- [x] Сопоставить найденные голосовые компоненты с текущим браузерным Voice Chat ORBIT без ElevenLabs.
+- [x] Улучшить Voice Chat ORBIT на основе безопасных компонентов из архива, если они совместимы.
+- [x] Проверить тесты и визуальное состояние Voice Chat после улучшений.
+- [ ] Сообщить пользователю, какие голосовые возможности найдены в архиве и что изменено в ORBIT.
+- [x] Не подключать ElevenLabs и не запрашивать ELEVENLABS_API_KEY.

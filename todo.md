@@ -119,4 +119,4 @@
 
 - [x] Добавить опубликованный Manus URL как официальный сайт GitHub-репозитория ORBIT.
 - [x] Настроить GitHub Pages-переход на рабочий Manus ORBIT вместо README.
-- [x] Проверить публичные ссылки GitHub и Manus после связывания.
+- [x] Проверить публичные ссылки GitHub и Manus после связывания: прямой GitHub index.html ведёт на рабочий Manus ORBIT.

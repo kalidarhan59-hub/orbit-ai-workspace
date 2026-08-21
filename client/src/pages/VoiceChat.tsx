@@ -2,7 +2,7 @@ import { OrbitPage } from "@/components/OrbitPage";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { hasSpeechSynthesis, VOICE_OUTPUT_UNAVAILABLE_MESSAGE } from "@/lib/voice";
+import { findPreferredMaleVoice, hasSpeechSynthesis, isLikelyMaleVoice, sanitizeTextForSpeech, sortSystemVoices, VOICE_OUTPUT_UNAVAILABLE_MESSAGE } from "@/lib/voice";
 import { AudioLines, Bot, Check, ChevronDown, MessageSquareText, Mic, Radio, Settings2, Sparkles, Square, Volume2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -29,7 +29,9 @@ export default function VoiceChat() {
   const utils = trpc.useUtils();
 
   const isActive = voiceState === "listening" || voiceState === "thinking" || voiceState === "speaking";
-  const russianVoices = useMemo(() => voices.filter((voice) => voice.lang.toLowerCase().startsWith("ru")), [voices]);
+  const orderedVoices = useMemo(() => sortSystemVoices(voices), [voices]);
+  const russianVoices = useMemo(() => orderedVoices.filter((voice) => voice.lang.toLowerCase().startsWith("ru")), [orderedVoices]);
+  const hasMaleRussianVoice = useMemo(() => russianVoices.some(isLikelyMaleVoice), [russianVoices]);
 
   const ask = trpc.assistant.send.useMutation({
     onSuccess: (result) => {
@@ -47,7 +49,7 @@ export default function VoiceChat() {
       const next = window.speechSynthesis?.getVoices() ?? [];
       setVoices(next);
       if (!selectedVoice) {
-        const preferred = next.find((voice) => voice.lang.toLowerCase().startsWith("ru") && /female|жен|milena|alena|katya/i.test(voice.name)) || next.find((voice) => voice.lang.toLowerCase().startsWith("ru")) || next[0];
+        const preferred = findPreferredMaleVoice(next) || next[0];
         if (preferred) setSelectedVoice(preferred.voiceURI);
       }
     };
@@ -95,11 +97,13 @@ export default function VoiceChat() {
   const speak = (text: string) => {
     if (!hasSpeechSynthesis(window)) { setVoiceState("idle"); toast.info(VOICE_OUTPUT_UNAVAILABLE_MESSAGE); return; }
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, " Я подготовил код, он показан на экране. ").replace(/[*_#`]/g, ""));
+    const spokenText = sanitizeTextForSpeech(text);
+    if (!spokenText) { setVoiceState("idle"); return; }
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = "ru-RU";
     utterance.rate = rate;
     utterance.pitch = 1;
-    const voice = voices.find((item) => item.voiceURI === selectedVoice) || russianVoices[0];
+    const voice = voices.find((item) => item.voiceURI === selectedVoice) || findPreferredMaleVoice(voices) || russianVoices[0];
     if (voice) utterance.voice = voice;
     utterance.onstart = () => setVoiceState("speaking");
     utterance.onend = () => setVoiceState("idle");
@@ -146,7 +150,7 @@ export default function VoiceChat() {
   return <OrbitPage eyebrow="Разговор в реальном времени" title="Voice Chat" action={<div className="flex items-center gap-2"><Button onClick={() => setSettingsOpen((open) => !open)} variant="outline" className="border-white/[0.12] bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]" aria-label="Настройки голоса"><Settings2 className="size-4" /></Button><Button onClick={stopAll} variant="outline" disabled={!isActive} className="border-white/[0.12] bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]"><Square className="mr-2 size-4" /> Остановить</Button></div>}>
     <div className="relative flex min-h-[calc(100vh-13rem)] flex-col overflow-hidden rounded-3xl border border-white/[0.09] bg-[#10182a] px-5 py-8 sm:px-10 lg:py-12">
       <div className="pointer-events-none absolute -left-24 top-[-10rem] size-[28rem] rounded-full bg-violet-500/[0.10] blur-[105px]" /><div className="pointer-events-none absolute bottom-[-12rem] right-[-7rem] size-[26rem] rounded-full bg-cyan-300/[0.08] blur-[100px]" />
-      {settingsOpen && <div className="absolute right-5 top-5 z-20 w-[min(21rem,calc(100%-2.5rem))] rounded-2xl border border-white/[0.1] bg-[#0d1426]/95 p-4 text-left shadow-2xl backdrop-blur-xl"><div className="flex items-center justify-between"><p className="font-medium text-white">Настройки голоса</p><button onClick={() => setSettingsOpen(false)} className="text-slate-400 hover:text-white" aria-label="Закрыть настройки"><X className="size-4" /></button></div><label className="mt-4 block text-xs text-slate-400">Системный голос</label><select value={selectedVoice} onChange={(event) => setSelectedVoice(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.1] bg-[#111b30] px-3 py-2 text-sm text-white outline-none"><option value="">Автовыбор русского голоса</option>{voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}</option>)}</select><label className="mt-4 block text-xs text-slate-400">Скорость: {rate.toFixed(2)}</label><input aria-label="Скорость речи" className="mt-2 w-full accent-violet-400" type="range" min="0.75" max="1.2" step="0.01" value={rate} onChange={(event) => setRate(Number(event.target.value))} /><p className="mt-3 text-xs leading-5 text-slate-500">Используется голос, установленный в вашем браузере или операционной системе. Внешние голосовые сервисы не подключаются.</p></div>}
+      {settingsOpen && <div className="absolute right-5 top-5 z-20 w-[min(21rem,calc(100%-2.5rem))] rounded-2xl border border-white/[0.1] bg-[#0d1426]/95 p-4 text-left shadow-2xl backdrop-blur-xl"><div className="flex items-center justify-between"><p className="font-medium text-white">Настройки голоса</p><button onClick={() => setSettingsOpen(false)} className="text-slate-400 hover:text-white" aria-label="Закрыть настройки"><X className="size-4" /></button></div><label className="mt-4 block text-xs text-slate-400">Системный голос</label><select value={selectedVoice} onChange={(event) => setSelectedVoice(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.1] bg-[#111b30] px-3 py-2 text-sm text-white outline-none"><option value="">Автовыбор русского голоса</option>{orderedVoices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}{isLikelyMaleVoice(voice) ? " · мужской приоритет" : ""}</option>)}</select><label className="mt-4 block text-xs text-slate-400">Скорость: {rate.toFixed(2)}</label><input aria-label="Скорость речи" className="mt-2 w-full accent-violet-400" type="range" min="0.75" max="1.2" step="0.01" value={rate} onChange={(event) => setRate(Number(event.target.value))} /><p className="mt-3 text-xs leading-5 text-slate-500">Используется голос, установленный в вашем браузере или операционной системе. Внешние голосовые сервисы не подключаются.</p>{voices.length > 0 && !hasMaleRussianVoice && <p className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.06] px-3 py-2 text-xs leading-5 text-amber-100/80">Мужской русский голос не найден в системе. Используется лучший доступный русский голос. Можно установить мужской голос в настройках операционной системы.</p>}</div>}
       <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center text-center">
         <button type="button" onClick={isActive ? stopAll : startListening} disabled={voiceState === "thinking"} aria-label={isActive ? "Остановить голосовой разговор" : "Начать голосовой разговор"} className={cn("voice-orbit group relative grid size-52 place-items-center rounded-full border transition-all duration-300 active:scale-95 sm:size-60", voiceState === "listening" && "border-cyan-200/80 bg-cyan-300/15 shadow-[0_0_90px_rgba(103,232,249,.35)]", voiceState === "thinking" && "border-violet-200/70 bg-violet-400/15 shadow-[0_0_90px_rgba(167,139,250,.3)]", voiceState === "speaking" && "border-emerald-200/70 bg-emerald-300/12 shadow-[0_0_90px_rgba(110,231,183,.25)]", (voiceState === "idle" || voiceState === "unsupported") && "border-violet-300/35 bg-violet-400/10 hover:border-violet-200/75 hover:bg-violet-400/16 hover:shadow-[0_0_85px_rgba(167,139,250,.28)]")} style={{ transform: `scale(${1 + (audioLevel / 100) * 0.06})` }}>{voiceState === "listening" ? <AudioLines className="size-12 text-cyan-100" /> : voiceState === "thinking" ? <Bot className="size-12 animate-pulse text-violet-100" /> : voiceState === "speaking" ? <Volume2 className="size-12 text-emerald-100" /> : <Mic className="size-12 text-violet-100 transition-transform duration-200 group-hover:scale-110" />}<span className="pointer-events-none absolute inset-4 rounded-full border border-white/[0.08]" /><span className={cn("pointer-events-none absolute -inset-5 rounded-full border border-current opacity-0", voiceState === "listening" && "animate-ping opacity-30 text-cyan-200", voiceState === "speaking" && "animate-pulse opacity-25 text-emerald-200")} /></button>
         <p className="mt-10 text-xl font-semibold tracking-tight text-white sm:text-2xl">{stateCopy[voiceState].title}</p><p aria-live="polite" className="mt-3 max-w-lg text-sm leading-6 text-slate-400">{stateCopy[voiceState].description}</p>

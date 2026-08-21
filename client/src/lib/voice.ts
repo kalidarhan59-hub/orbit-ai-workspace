@@ -36,9 +36,39 @@ export function findPreferredMaleVoice(voices: SpeechSynthesisVoice[]): SpeechSy
     || sortSystemVoices(voices).find((voice) => voice.lang.toLowerCase().startsWith("ru"));
 }
 
+/** Expand common abbreviations and technical tokens before the browser voice receives text. */
+export function expandSpeechAbbreviations(input: string): string {
+  const boundary = (token: string, flags = "gi") => new RegExp(`(^|[^A-Za-zА-Яа-яЁё0-9])${token}(?=$|[^A-Za-zА-Яа-яЁё0-9])`, flags);
+  const replacements: Array<[RegExp, string]> = [
+    [boundary("т\\.\\s*д\\.?"), "$1так далее"],
+    [boundary("т\\.\\s*п\\.?"), "$1тому подобное"],
+    [boundary("т\\.\\s*е\\.?"), "$1то есть"],
+    [boundary("т\\.\\s*к\\.?"), "$1так как"],
+    [boundary("и\\.\\s*о\\.?"), "$1исполняющий обязанности"],
+    [boundary("и\\s+т\\s+д"), "$1и так далее"],
+    [boundary("и\\s+т\\s+п"), "$1и тому подобное"],
+    [boundary("ИИ", "g"), "$1искусственный интеллект"],
+    [boundary("AI"), "$1искусственный интеллект"],
+    [boundary("API"), "$1эй пи ай"],
+    [boundary("URL"), "$1ссылка"],
+    [boundary("HTML"), "$1эйч ти эм эл"],
+    [boundary("CSS"), "$1си эс эс"],
+    [boundary("JavaScript"), "$1джаваскрипт"],
+    [boundary("JS"), "$1джей эс"],
+    [boundary("UX\\/UI"), "$1пользовательский опыт и интерфейс"],
+    [boundary("PDF"), "$1пи ди эф"],
+    [boundary("GPT"), "$1джи пи ти"],
+    [boundary("SQL"), "$1эс кью эл"],
+    [boundary("HTTPS?"), "$1протокол передачи данных"],
+    [boundary("РФ", "g"), "$1Российская Федерация"],
+    [boundary("США", "g"), "$1Соединённые Штаты Америки"],
+  ];
+  return replacements.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), input);
+}
+
 /** Converts an AI answer into clean spoken Russian without reading markup or punctuation aloud. */
 export function splitTextForSpeech(input: string): string[] {
-  return input
+  return expandSpeechAbbreviations(input)
     .replace(/```[\s\S]*?```/g, " Я подготовил код, он показан на экране. ")
     .split(/(?:[.!?…]+|[\n\r]+|[;:]+)+/)
     .map((part) => sanitizeTextForSpeech(part))
@@ -46,7 +76,7 @@ export function splitTextForSpeech(input: string): string[] {
 }
 
 export function sanitizeTextForSpeech(input: string): string {
-  return input
+  return expandSpeechAbbreviations(input)
     .replace(/```[\s\S]*?```/g, " Я подготовил код, он показан на экране. ")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
